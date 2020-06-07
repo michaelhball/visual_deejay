@@ -2,7 +2,7 @@ import cv2
 import math
 import numpy as np
 
-from .utils import angle_between_two_lines, plot_one
+from .utils import angle_between_two_lines, extract_text_from_image, get_video_properties, plot_one
 
 
 def extract_knob_angle(knob_img):
@@ -68,36 +68,37 @@ def extract_knob_angle(knob_img):
 
 
 def extract_channel_features(channel_img):
+    """
+
+    :param channel_img:
+    :return:
+    """
+
     # extract fader value
-    fader_img = channel_img[300:, :, :]
-    print(fader_img.shape)
-    plot_one(fader_img)
+    fader_img = channel_img[314:392, :, :]
+    fader_img = cv2.cvtColor(fader_img, cv2.COLOR_BGR2GRAY)
+    ret, fader_img_thresh = cv2.threshold(fader_img, 127, 255, cv2.THRESH_BINARY)
+    fader_val = (fader_img_thresh.shape[0] - 1 - np.max(np.nonzero(fader_img_thresh)[0])) / (fader_img_thresh.shape[0] - 1)
+    if fader_val <= 0:
+        return {"fader": 0}
 
     # extract trim value
     trim_img = channel_img[8:50, :, :]
-    plot_one(trim_img)
-    trim_val = extract_knob_angle(trim_img)
-    return
+    trim_angle = extract_knob_angle(trim_img)
 
     # extract highs value
     highs_img = channel_img[74:116, :, :]
-    print(highs_img.shape)
-    plot_one(highs_img)
     highs_angle = extract_knob_angle(highs_img)
 
     # extract mids value
     mids_img = channel_img[140:182, :, :]
-    print(mids_img.shape)
-    plot_one(mids_img)
     mids_angle = extract_knob_angle(mids_img)
 
     # extract lows value
     lows_img = channel_img[206:248, :, :]
-    print(lows_img.shape)
-    plot_one(lows_img)
     lows_angle = extract_knob_angle(lows_img)
 
-    return {}
+    return {"fader": fader_val, "trim": trim_angle, "high": highs_angle, "mid": mids_angle, "low": lows_angle}
 
 
 def extract_features_from_frame(frame):
@@ -108,20 +109,79 @@ def extract_features_from_frame(frame):
     """
 
     # TODO: convert all image croppings to relative rather than absolute in case they don't work with resolution of vid
+
+    features = {"left": {}, "right": {}}
+
+    # extract time gone/remaining for each track
+    left_track_time_rem_img = frame[615:665, 1075:1210, :]
+    features["left"]["time_rem"] = extract_text_from_image(left_track_time_rem_img)
+    right_track_time_rem_img = frame[615:665, 2860:2995, :]
+    features["right"]["time_rem"] = extract_text_from_image(right_track_time_rem_img)
+    left_track_time_gone_img = frame[615:665, 1215:1330, :]
+    features["left"]["time_gone"] = extract_text_from_image(left_track_time_gone_img)
+    right_track_time_gone_img = frame[615:665, 3000:3120, :]
+    features["right"]["time_gone"] = extract_text_from_image(right_track_time_gone_img)
+
+    # extract title & artist of each  track
+    left_track_title_img = frame[580:625, 110:1000, :]
+    features["left"]["title"] = extract_text_from_image(left_track_title_img)
+    left_track_artist_img = frame[625:660, 110:430, :]
+    features["left"]["artist"] = extract_text_from_image(left_track_artist_img)
+    right_track_title_img = frame[580:625, 1900:2780, :]
+    features["right"]["title"] = extract_text_from_image(right_track_title_img)
+    right_track_artist_img = frame[625:660, 1900:2220, :]
+    features["right"]["artist"] = extract_text_from_image(right_track_artist_img)
+
     left_channel_eqs_img = frame[600:1010, 1590:1665, :]
+    left_channel_features = extract_channel_features(left_channel_eqs_img)
+    if isinstance(left_channel_features, bool) and not left_channel_features:
+        return False
+    features["left"]["eqs"] = left_channel_features
+
     right_channel_eqs_img = frame[600:1010, 1695:1770, :]
-    print(f"channel eqs images shapes -- left: {left_channel_eqs_img.shape}, right: {right_channel_eqs_img}")
-
-    # left_channel_features = extract_channel_features(left_channel_eqs_img)
-    # if isinstance(left_channel_features, bool) and not left_channel_features:
-    #     return False
-
     right_channel_features = extract_channel_features(right_channel_eqs_img)
     if isinstance(right_channel_features, bool) and not right_channel_features:
         return False
+    features["right"]["eqs"] = right_channel_features
 
-    return True
+    return features
 
 
 def extract_features_from_video():
-    pass
+    """
+
+    :return:
+    """
+
+    video_file = "/Users/michaelball/Desktop/big_breakfast.mov"
+
+    # get video fps, duration, & => total number of frames to process
+    video_properties = get_video_properties(video_file)
+    if isinstance(video_properties, bool) and not video_properties:
+        return False
+
+    # iterate through video frame by frame...
+    video_capture = cv2.VideoCapture(video_file)
+    idx, success = 0, True
+    features = []
+    while success:
+        success, frame = video_capture.read()
+        if not success:
+            return False
+
+        if idx % 60 == 0:
+            frame_features = extract_features_from_frame(frame)
+            if isinstance(frame_features, bool) and not frame_features:
+                return False
+            features.append(frame_features)
+            break
+
+        idx += 1
+        if idx > 600:
+            break
+
+    print(features)
+
+    video_capture.release()
+    cv2.destroyAllWindows()
+    return True

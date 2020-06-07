@@ -1,8 +1,12 @@
+import cv2
 import math
 import matplotlib.pyplot as plt
+import os
+import pytesseract
+import subprocess
+import sys
 
-
-__all__ = ["angle_between_two_lines", "plot_one", "plot_two"]
+from PIL import Image
 
 
 def angle_between_two_lines(v1, v2):
@@ -19,6 +23,73 @@ def angle_between_two_lines(v1, v2):
     len1 = math.hypot(x1, y1)
     len2 = math.hypot(x2, y2)
     return math.acos(inner_product / (len1 * len2))
+
+
+def extract_text_from_image(img):
+    """
+
+    :param img:
+    :return:
+    """
+
+    grayscale = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    text = pytesseract.image_to_string(Image.fromarray(grayscale))
+    return text
+
+
+def get_video_properties(filename):
+    """
+
+    :param filename:
+    :return:
+    """
+
+    duration = get_video_duration(filename)
+    fps = get_video_frame_rate(filename)
+    if fps == -1:
+        return False
+
+    return {
+        "duration": duration,
+        "fps": fps,
+        "num_frames": math.floor(duration * fps)
+    }
+
+
+def get_video_duration(filename):
+    """
+        https://stackoverflow.com/questions/3844430/how-to-get-the-duration-of-a-video-in-python
+
+    :param filename:
+    :return:
+    """
+
+    result = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of",
+                             "default=noprint_wrappers=1:nokey=1", filename], stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+    return float(result.stdout)
+
+
+def get_video_frame_rate(filename):
+    """
+        https://askubuntu.com/questions/110264/how-to-find-frames-per-second-of-any-video-file
+
+    :param filename:
+    :return:
+    """
+
+    if not os.path.exists(filename):
+        sys.stderr.write("ERROR: filename %r was not found!" % (filename,))
+        return -1
+    out = subprocess.check_output(
+        ["ffprobe", filename, "-v", "0", "-select_streams", "v", "-print_format", "flat", "-show_entries",
+         "stream=r_frame_rate"])
+    rate = out.decode("utf-8").split('=')[1].strip()[1:-1].split('/')
+    if len(rate) == 1:
+        return float(rate[0])
+    if len(rate) == 2:
+        return float(rate[0]) / float(rate[1])
+    return -1
 
 
 def plot_one(img, cmap='viridis'):
