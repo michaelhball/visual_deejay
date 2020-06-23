@@ -1,6 +1,10 @@
 import cv2
 import math
 import numpy as np
+import pickle
+
+from pathlib import Path
+from tqdm import tqdm
 
 from .utils import angle_between_two_lines, extract_text_from_image, get_video_properties, plot_one
 
@@ -109,6 +113,7 @@ def extract_features_from_frame(frame):
     """
 
     # TODO: convert all image croppings to relative rather than absolute in case they don't work with resolution of vid
+    #   ultimately might want to find a better way... for now I can rely on having everything just so on the screen??
 
     features = {"left": {}, "right": {}}
 
@@ -147,41 +152,79 @@ def extract_features_from_frame(frame):
     return features
 
 
-def extract_features_from_video():
+def extract_features_from_video(video_file, params):
+    """ Extracts features for each channel from a complete video
+
+    :param video_file: (path) path to video file we want to extract features from
+    :param params: (dict) control params for the feature extraction
+    :return: Features extracted if successful, else False.
     """
 
-    :return:
-    """
-
-    video_file = "/Users/michaelball/Desktop/big_breakfast.mov"
+    interval = params.get("interval")
 
     # get video fps, duration, & => total number of frames to process
     video_properties = get_video_properties(video_file)
     if isinstance(video_properties, bool) and not video_properties:
         return False
+    duration, fps = video_properties.get("duration"), video_properties.get("fps")
+    frame_time = 1.0 / fps
+    total_num_frames = int(duration * fps)
 
     # iterate through video frame by frame...
     video_capture = cv2.VideoCapture(video_file)
     idx, success = 0, True
-    features = []
+    curr_left_track, curr_right_track = None, None
+    curr_left_artist, curr_right_artist = None, None
+    features = {}
+
+    pbar = tqdm(total=total_num_frames)
     while success:
+        pbar.update(1)
+
+        # get the next frame
         success, frame = video_capture.read()
         if not success:
             return False
 
-        if idx % 60 == 0:
+        # extract features for both channels
+        if idx % interval == 0:
+            curr_time_stamp = idx * frame_time
+
+            # extract features & add current time stamps
             frame_features = extract_features_from_frame(frame)
             if isinstance(frame_features, bool) and not frame_features:
                 return False
-            features.append(frame_features)
-            break
+            frame_features["left"]["time"] = curr_time_stamp
+            frame_features["right"]["time"] = curr_time_stamp
+
+            # work out whether we've transitioned tracks & append data to the right place
+            left_track_title, right_track_title = frame_features["left"]["title"], frame_features["right"]["title"]
+            left_track_artist, right_track_artist = frame_features["left"]["artist"], frame_features["right"]["artist"]
+            if left_track_title != curr_left_track or left_track_artist != curr_left_artist:
+                curr_left_artist, curr_left_track = left_track_artist, left_track_title
+                if curr_left_artist not in features:
+                    features[left_track_artist] = {left_track_title: []}
+                else:
+                    features[left_track_artist][left_track_title] = []
+            if right_track_title != curr_right_track or right_track_artist != curr_right_artist:
+                curr_right_artist, curr_right_track = right_track_artist, right_track_title
+                if curr_right_artist not in features:
+                    features[right_track_artist] = {right_track_title: []}
+                else:
+                    features[right_track_artist][right_track_title] = []
+
+            # append to overall feature collection
+            features[left_track_artist][left_track_title].append(frame_features["left"])
+            features[right_track_artist][right_track_title].append(frame_features["right"])
 
         idx += 1
         if idx > 600:
             break
 
-    print(features)
-
+    pbar.close()
     video_capture.release()
     cv2.destroyAllWindows()
+
+    pickle.dump(features, Path("./features_example.pkl").open('wb'), pickle.HIGHEST_PROTOCOL)
+
     return True
