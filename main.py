@@ -25,6 +25,8 @@ if __name__ == '__main__':
     #  the fraction multiplier that trim applies to the mix should be computed as a fraction of the maximum trim value
     #  that is used by that song (there is no absolute maximum, e.g. because different tracks have diff volumes).
 
+    # TODO: convert tracklist time-stamps from video space --> audio space
+
     video_file = "/Users/michaelball/Desktop/big_breakfast.mov"
     params = {"interval": 10}  # => 6 fps
     extract_features_from_video(video_file, params)

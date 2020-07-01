@@ -1,11 +1,10 @@
 def create_tracklist(video_features):
     """ Createst a time-stamped tracklist from video features (in video time-space)
 
-    :param video_features:
+    :param video_features: (list(dict)) list of features for each time-stamp in screen-recording video
     :return: Tracklist if successful (artist, track, & starting timestamp), False otherwise.
     """
 
-    # TODO: create tracklist using video time-stamps then can convert --> audio file time-stamps
     tracklist = []
     FADER_THRESH = 0.5
     curr_left_track_name, curr_right_track_name = None, None
@@ -32,6 +31,3 @@ def create_tracklist(video_features):
     except Exception as e:
         print(f"Exception creating tracklist: {e}")
         return False
-
-
-
