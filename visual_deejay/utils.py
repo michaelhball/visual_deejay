@@ -37,6 +37,22 @@ def extract_text_from_image(img):
     return text
 
 
+def get_time_conversion(video_features, audio_features):
+    """ Finds the needed function to convert from video feature timestamps --> timestamps of the actual audio
+        recording.
+
+    :param video_features: (list(dict)) features for each time-step in the screen recording
+    :param audio_features: (list(dict)) features for each time-step in the screen recording
+    :return: A function that converts time-stamps from video space --> audio space.
+    """
+
+    # TODO: audio-file time-start is just whenever the waveform first has sound (should be silent before PLAY pressed)
+    # TODO: could find first moment in video using the first time something changes i.e. the frame where time
+    #  remaining changes for the first track
+
+    pass
+
+
 def get_video_properties(filename):
     """
 

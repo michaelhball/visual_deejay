@@ -137,13 +137,13 @@ def extract_features_from_frame(frame):
     right_track_artist_img = frame[625:660, 1900:2220, :]
     features["right"]["artist"] = extract_text_from_image(right_track_artist_img)
 
-    left_channel_eqs_img = frame[600:1010, 1590:1665, :]
+    left_channel_eqs_img = frame[600:1010, 1595:1665, :]
     left_channel_features = extract_channel_features(left_channel_eqs_img)
     if isinstance(left_channel_features, bool) and not left_channel_features:
         return False
     features["left"]["eqs"] = left_channel_features
 
-    right_channel_eqs_img = frame[600:1010, 1695:1770, :]
+    right_channel_eqs_img = frame[600:1010, 1700:1770, :]
     right_channel_features = extract_channel_features(right_channel_eqs_img)
     if isinstance(right_channel_features, bool) and not right_channel_features:
         return False
@@ -167,64 +167,89 @@ def extract_features_from_video(video_file, params):
     if isinstance(video_properties, bool) and not video_properties:
         return False
     duration, fps = video_properties.get("duration"), video_properties.get("fps")
+    total_num_frames = video_properties.get("num_frames")
     frame_time = 1.0 / fps
-    total_num_frames = int(duration * fps)
+
+    print(video_properties)
 
     # iterate through video frame by frame...
     video_capture = cv2.VideoCapture(video_file)
-    idx, success = 0, True
-    curr_left_track, curr_right_track = None, None
-    curr_left_artist, curr_right_artist = None, None
-    features = {}
+    features = []
+
+    # frame_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    # frame_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+    # fps = int(video_capture.get(cv2.CAP_PROP_FPS))
+    # num_frames = int(video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
+    # duration = num_frames / fps
+    # print(duration, fps, num_frames, frame_height, frame_width)
+    # return
 
     pbar = tqdm(total=total_num_frames)
-    while success:
+    for idx in range(total_num_frames):
         pbar.update(1)
 
         # get the next frame
-        success, frame = video_capture.read()
-        if not success:
+        ret, frame = video_capture.read()
+        if isinstance(ret, bool) and not ret:
             return False
 
-        # extract features for both channels
+        # extract features for both channels incl. curr time stamps (only for desired fps)
         if idx % interval == 0:
-            curr_time_stamp = idx * frame_time
-
-            # extract features & add current time stamps
             frame_features = extract_features_from_frame(frame)
             if isinstance(frame_features, bool) and not frame_features:
                 return False
-            frame_features["left"]["time"] = curr_time_stamp
-            frame_features["right"]["time"] = curr_time_stamp
-
-            # work out whether we've transitioned tracks & append data to the right place
-            left_track_title, right_track_title = frame_features["left"]["title"], frame_features["right"]["title"]
-            left_track_artist, right_track_artist = frame_features["left"]["artist"], frame_features["right"]["artist"]
-            if left_track_title != curr_left_track or left_track_artist != curr_left_artist:
-                curr_left_artist, curr_left_track = left_track_artist, left_track_title
-                if curr_left_artist not in features:
-                    features[left_track_artist] = {left_track_title: []}
-                else:
-                    features[left_track_artist][left_track_title] = []
-            if right_track_title != curr_right_track or right_track_artist != curr_right_artist:
-                curr_right_artist, curr_right_track = right_track_artist, right_track_title
-                if curr_right_artist not in features:
-                    features[right_track_artist] = {right_track_title: []}
-                else:
-                    features[right_track_artist][right_track_title] = []
-
-            # append to overall feature collection
-            features[left_track_artist][left_track_title].append(frame_features["left"])
-            features[right_track_artist][right_track_title].append(frame_features["right"])
+            frame_features["time"] = idx * frame_time
+            features.append(frame_features)
 
         idx += 1
-        if idx > 600:
+        if idx > 10000:
             break
 
     pbar.close()
     video_capture.release()
     cv2.destroyAllWindows()
 
-    pickle.dump(features, Path("./features_example.pkl").open('wb'), pickle.HIGHEST_PROTOCOL)
-
+    pickle.dump(features, Path("./features_example_big.pkl").open('wb'), pickle.HIGHEST_PROTOCOL)
     return True
+
+
+def extract_track_features_from_video_features(video_features):
+    """
+
+    :param video_features:
+    :return: Dictionary containing time-series features for each track if successful, False otherwise.
+    """
+
+    curr_left_track_name, curr_right_track_name = None, None
+    curr_left_track_artist, curr_right_track_artist = None, None
+    features = {}
+
+    try:
+        for i, frame_features in enumerate(video_features):
+            frame_features["left"]["time"] = frame_features["time"]
+            frame_features["right"]["time"] = frame_features["time"]
+
+            # work out whether we've transitioned tracks & append data to the right place
+            left_track_name, right_track_name = frame_features["left"]["title"], frame_features["right"]["title"]
+            left_track_artist, right_track_artist = frame_features["left"]["artist"], frame_features["right"]["artist"]
+            if left_track_name != curr_left_track_name or left_track_artist != curr_left_track_artist:
+                curr_left_track_artist, curr_left_track_name = left_track_artist, left_track_name
+                if curr_left_track_artist not in features:
+                    features[left_track_artist] = {left_track_name: []}
+                else:
+                    features[left_track_artist][left_track_name] = []
+            if right_track_name != curr_right_track_name or right_track_artist != curr_right_track_artist:
+                curr_right_track_artist, curr_right_track_namae = right_track_artist, right_track_name
+                if curr_right_track_artist not in features:
+                    features[right_track_artist] = {right_track_name: []}
+                else:
+                    features[right_track_artist][right_track_name] = []
+
+            # append to overall feature collection
+            features[left_track_artist][left_track_name].append(frame_features["left"])
+            features[right_track_artist][right_track_name].append(frame_features["right"])
+
+        return features
+    except Exception as e:
+        print(f"Exception extracting per-track features from video features: \n{e}")
+        return False
