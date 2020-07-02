@@ -12,18 +12,20 @@ def create_tracklist(video_features):
 
     try:
         for i, frame_features in enumerate(video_features):
-            left_track, right_track, time = frame_features["left"], frame_features["left"], frame_features["time"]
+            left_track, right_track, time = frame_features["left"], frame_features["right"], frame_features["time"]
 
             # work out whether we've transitioned tracks & add to tracklist but curr variables
             left_track_name, right_track_name = left_track["title"], right_track["title"]
             left_track_artist, right_track_artist = left_track["artist"], right_track["artist"]
 
             if left_track_name != curr_left_track_name or left_track_artist != curr_left_track_artist:
-                if left_track["fader"] > FADER_THRESH:
+                if left_track["eqs"]["fader"] > FADER_THRESH:
+                    print(i, time)
                     tracklist.append({"time": time, "artist": left_track_artist, "name": left_track_name})
                     curr_left_track_artist, curr_left_track_name = left_track_artist, left_track_name
             elif right_track_name != curr_right_track_name or right_track_artist != curr_right_track_artist:
-                if right_track["fader"] > FADER_THRESH:
+                if right_track["eqs"]["fader"] > FADER_THRESH:
+                    print(i, time)
                     tracklist.append({"time": time, "artist": right_track_artist, "name": right_track_name})
                     curr_right_track_artist, curr_right_track_name = right_track_artist, right_track_name
 
