@@ -1,6 +1,11 @@
 import cv2
+import pickle
 
-from visual_deejay.feature_extraction import extract_features_from_video
+from pathlib import Path
+
+from visual_deejay.feature_extraction import clean_video_features, extract_features_from_video
+from visual_deejay.tracklist import create_tracklist
+from visual_deejay.utils import display_video_frame
 
 
 if __name__ == '__main__':
@@ -27,6 +32,15 @@ if __name__ == '__main__':
 
     # TODO: convert tracklist time-stamps from video space --> audio space
 
+    # TODO: test whether fps, num_frames etc. coming from my function are correct (cv2 functions give diff response).
+
     video_file = "/Users/michaelball/Desktop/big_breakfast.mov"
-    params = {"interval": 10}  # => 6 fps
-    extract_features_from_video(video_file, params)
+    video_features = pickle.load(Path('./features_example_big.pkl').open('rb'))
+    clean_video_features(video_features)
+
+    # params = {"interval": 10}  # => 6 fps
+    # extract_features_from_video(video_file, params)
+
+    print(create_tracklist(video_features))
+
+    # print([(i, f["right"]['artist']) for i, f in enumerate(video_features[:1000]) if f["right"]["artist"] != "Gerwin"])
