@@ -1,12 +1,15 @@
 import cv2
 import math
 import numpy as np
+import pandas as pd
 import pickle
 
+from itertools import groupby
 from pathlib import Path
 from tqdm import tqdm
 
-from .utils import angle_between_two_lines, extract_text_from_image, get_video_properties, plot_one
+from .utils import (angle_between_two_lines, convert_time_gone_to_seconds, convert_time_rem_to_seconds,
+                    extract_text_from_image, get_video_properties, plot_one)
 
 
 def extract_knob_angle(knob_img):
@@ -119,13 +122,13 @@ def extract_features_from_frame(frame):
 
     # extract time gone/remaining for each track
     left_track_time_rem_img = frame[615:665, 1075:1210, :]
-    features["left"]["time_rem"] = extract_text_from_image(left_track_time_rem_img)
+    features["left"]["time_rem"] = convert_time_rem_to_seconds(extract_text_from_image(left_track_time_rem_img))
     right_track_time_rem_img = frame[615:665, 2860:2995, :]
-    features["right"]["time_rem"] = extract_text_from_image(right_track_time_rem_img)
+    features["right"]["time_rem"] = convert_time_rem_to_seconds(extract_text_from_image(right_track_time_rem_img))
     left_track_time_gone_img = frame[615:665, 1215:1330, :]
-    features["left"]["time_gone"] = extract_text_from_image(left_track_time_gone_img)
+    features["left"]["time_gone"] = convert_time_rem_to_seconds(extract_text_from_image(left_track_time_gone_img))
     right_track_time_gone_img = frame[615:665, 3000:3120, :]
-    features["right"]["time_gone"] = extract_text_from_image(right_track_time_gone_img)
+    features["right"]["time_gone"] = convert_time_rem_to_seconds(extract_text_from_image(right_track_time_gone_img))
 
     # extract title & artist of each  track
     left_track_title_img = frame[580:625, 110:1000, :]
@@ -211,6 +214,50 @@ def extract_features_from_video(video_file, params):
 
     pickle.dump(features, Path("./features_example_big.pkl").open('wb'), pickle.HIGHEST_PROTOCOL)
     return True
+
+
+def clean_video_features(video_features):
+    """
+
+    :param video_features:
+    :return:
+    """
+
+    # TODO: move this to inside extract video_feature function -- no need to wait until now to do it
+    for i, frame_features in enumerate(video_features):
+        for side in ["left", "right"]:
+            side_features = frame_features[side]
+            video_features[i][side]["time_gone"] = convert_time_gone_to_seconds(side_features["time_gone"])
+            video_features[i][side]["time_rem"] = convert_time_rem_to_seconds(side_features["time_rem"])
+
+    # compute missing values for time_gone & time_rem
+    time_gones, time_rems = {}, {}
+    for side in ["left", "right"]:
+        time_gones[side] = pd.Series([f[side]['time_gone'] for f in video_features]).interpolate().tolist()
+        time_rems[side] = pd.Series([f[side]['time_rem'] for f in video_features]).interpolate().tolist()
+
+    # fill in interpolated values for times + correct values for artists/tracks
+    total_num_frames = len(video_features)
+    for i, frame_features in enumerate(video_features):
+        for side in ["left", "right"]:
+            side_features = frame_features[side]
+            if side_features["time_gone"] is None:
+                video_features[i][side]["time_gone"] = time_gones[side]
+            if side_features["time_rem"] is None:
+                video_features[i][side]["time_rem"] = time_rems[side]
+
+            # 'interpolate' artists & track names to avoid errors
+            if i == 0 or i == total_num_frames - 1:
+                continue
+            else:
+                prev_frame = video_features[i - 1][side]
+                next_frame = video_features[i + 1][side]
+                if prev_frame["artist"] != side_features["artist"] and prev_frame["artist"] == next_frame["artist"]:
+                    video_features[i][side]["artist"] = prev_frame["artist"]
+                if prev_frame["title"] != side_features["title"] and prev_frame["title"] == next_frame["title"]:
+                    video_features[i][side]["title"] = prev_frame["title"]
+
+    return video_features
 
 
 def extract_track_features_from_video_features(video_features):

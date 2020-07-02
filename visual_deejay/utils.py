@@ -25,6 +25,54 @@ def angle_between_two_lines(v1, v2):
     return math.acos(inner_product / (len1 * len2))
 
 
+def convert_time_rem_to_seconds(time_rem):
+    """
+
+    :param time_rem:
+    :return:
+    """
+
+    try:
+        time_rem = time_rem if not time_rem.startswith("-") else time_rem[1:]
+        minutes, seconds = time_rem.split(":")
+        return 60 * int(minutes) + float(seconds)
+    except:
+        # print("Exception converting 'time_gone' string to seconds => returning None")
+        return None
+
+
+def convert_time_gone_to_seconds(time_gone):
+    """
+
+    :param time_gone:
+    :return:
+    """
+
+    try:
+        minutes, seconds = time_gone.split(":")
+        return 60 * int(minutes) + float(seconds)
+    except:
+        # print("Exception converting 'time_gone' string to seconds => returning None")
+        return None
+
+
+def display_video_frame(video_capture, n):
+    """
+
+    :param video_capture:
+    :param n:
+    :return:
+    """
+
+    video_capture.set(1, n)
+    ret, frame = video_capture.read()
+    if isinstance(ret, bool) and not ret:
+        return False
+    plt.imshow(frame)
+    plt.show()
+    return True
+
+
 def extract_text_from_image(img):
     """
 
