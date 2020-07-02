@@ -4,10 +4,10 @@ import numpy as np
 import pandas as pd
 import pickle
 
-from itertools import groupby
 from pathlib import Path
 from tqdm import tqdm
 
+from .tracklist import find_first_track_start
 from .utils import (angle_between_two_lines, convert_time_gone_to_seconds, convert_time_rem_to_seconds,
                     extract_text_from_image, get_video_properties, plot_one)
 
@@ -173,8 +173,6 @@ def extract_features_from_video(video_file, params):
     total_num_frames = video_properties.get("num_frames")
     frame_time = 1.0 / fps
 
-    print(video_properties)
-
     # iterate through video frame by frame...
     video_capture = cv2.VideoCapture(video_file)
     features = []
@@ -205,7 +203,7 @@ def extract_features_from_video(video_file, params):
             features.append(frame_features)
 
         idx += 1
-        if idx > 10000:
+        if idx > 20000:
             break
 
     pbar.close()
@@ -222,13 +220,6 @@ def clean_video_features(video_features):
     :param video_features:
     :return:
     """
-
-    # TODO: move this to inside extract video_feature function -- no need to wait until now to do it
-    for i, frame_features in enumerate(video_features):
-        for side in ["left", "right"]:
-            side_features = frame_features[side]
-            video_features[i][side]["time_gone"] = convert_time_gone_to_seconds(side_features["time_gone"])
-            video_features[i][side]["time_rem"] = convert_time_rem_to_seconds(side_features["time_rem"])
 
     # compute missing values for time_gone & time_rem
     time_gones, time_rems = {}, {}
@@ -267,34 +258,56 @@ def extract_track_features_from_video_features(video_features):
     :return: Dictionary containing time-series features for each track if successful, False otherwise.
     """
 
-    curr_left_track_name, curr_right_track_name = None, None
-    curr_left_track_artist, curr_right_track_artist = None, None
+    curr_track_artist, curr_track_name = {"left": None, "right": None}, {"left": None, "right": None}
     features = {}
+
+    # find index where the first track starts playing
+    first_track_start = find_first_track_start(video_features)
+    if isinstance(first_track_start, bool) and not first_track_start:
+        return False
+    first_track_start_idx, first_track_side = first_track_start
 
     try:
         for i, frame_features in enumerate(video_features):
             frame_features["left"]["time"] = frame_features["time"]
+            frame_features["left"]["og_idx"] = i
             frame_features["right"]["time"] = frame_features["time"]
+            frame_features["right"]["og_idx"] = i
 
-            # work out whether we've transitioned tracks & append data to the right place
-            left_track_name, right_track_name = frame_features["left"]["title"], frame_features["right"]["title"]
-            left_track_artist, right_track_artist = frame_features["left"]["artist"], frame_features["right"]["artist"]
-            if left_track_name != curr_left_track_name or left_track_artist != curr_left_track_artist:
-                curr_left_track_artist, curr_left_track_name = left_track_artist, left_track_name
-                if curr_left_track_artist not in features:
-                    features[left_track_artist] = {left_track_name: []}
-                else:
-                    features[left_track_artist][left_track_name] = []
-            if right_track_name != curr_right_track_name or right_track_artist != curr_right_track_artist:
-                curr_right_track_artist, curr_right_track_namae = right_track_artist, right_track_name
-                if curr_right_track_artist not in features:
-                    features[right_track_artist] = {right_track_name: []}
-                else:
-                    features[right_track_artist][right_track_name] = []
+            # ignore until we hit the start of the mix
+            if i < first_track_start_idx:
+                continue
 
-            # append to overall feature collection
-            features[left_track_artist][left_track_name].append(frame_features["left"])
-            features[right_track_artist][right_track_name].append(frame_features["right"])
+            # add first track
+            elif i == first_track_start_idx:
+                first_track_artist = frame_features[first_track_side]["artist"]
+                first_track_name = frame_features[first_track_side]["title"]
+                curr_track_artist[first_track_side] = first_track_artist
+                curr_track_name[first_track_side] = first_track_name
+                features[first_track_artist] = {first_track_name: []}
+
+            # add every other track as required
+            else:
+                left_track, right_track, time = frame_features["left"], frame_features["right"], frame_features["time"]
+                left_track_name, left_track_artist = left_track["title"], left_track["artist"]
+                right_track_name, right_track_artist = right_track["title"], right_track["artist"]
+
+                # make sure we have the new artists & tracks in our dictionary
+                if left_track_name != curr_track_name["left"] or left_track_artist != curr_track_artist["left"]:
+                    if left_track_artist not in features:
+                        features[left_track_artist] = {left_track_name: []}
+                    else:
+                        features[left_track_artist][left_track_name] = []
+                    curr_track_artist["left"], curr_track_name["left"] = left_track_artist, left_track_name
+                elif right_track_name != curr_track_name["right"] or right_track_artist != curr_track_artist["right"]:
+                    if right_track_artist not in features:
+                        features[right_track_artist] = {right_track_name: []}
+                    else:
+                        features[right_track_artist][right_track_name] = []
+                    curr_track_artist["right"], curr_track_name["right"] = right_track_artist, right_track_name
+
+                features[left_track_artist][left_track_name].append(frame_features["left"])
+                features[right_track_artist][right_track_name].append(frame_features["right"])
 
         return features
     except Exception as e:
