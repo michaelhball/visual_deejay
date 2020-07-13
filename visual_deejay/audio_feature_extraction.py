@@ -192,7 +192,7 @@ def hpss(y):
         return False
 
 
-def pipeline(track_file_path, hop_length=512, n_fft=2048, sampling_rate=44100):
+def pipeline(track_file_path, frame_length=1024, hop_length=512, n_fft=2048, sampling_rate=44100):
     """
 
     :param track_file_path:
@@ -207,6 +207,19 @@ def pipeline(track_file_path, hop_length=512, n_fft=2048, sampling_rate=44100):
     if isinstance(loaded, bool) and not loaded:
         return False
     y, sr = loaded
+
+    # song metadata
+    metadata = get_metadata(y, sr)
+    if isinstance(metadata, bool) and not metadata:
+        return False
+
+    # extract tempo, both  static & dynamic
+    static_tempo = extract_tempo(y, sampling_rate, "static", "uniform")
+    if isinstance(static_tempo, bool) and not static_tempo:
+        return False
+    dynamic_tempo = extract_tempo(y, sampling_rate, "dynamic", "lognorm")
+    if isinstance(dynamic_tempo, bool) and not dynamic_tempo:
+        return False
 
     # Short-Time Fourier Transform
     Y = stft(y, n_fft=n_fft, hop_length=hop_length)  # 1025 frequency bins x num_frames
