@@ -213,13 +213,17 @@ def pipeline(track_file_path, frame_length=1024, hop_length=512, n_fft=2048, sam
     if isinstance(metadata, bool) and not metadata:
         return False
 
+    print(metadata)
+
     # extract tempo, both  static & dynamic
-    static_tempo = extract_tempo(y, sampling_rate, "static", "uniform")
+    static_tempo = extract_tempo(y, sampling_rate, "static", None)  # use uniform only for electronic music
     if isinstance(static_tempo, bool) and not static_tempo:
         return False
     dynamic_tempo = extract_tempo(y, sampling_rate, "dynamic", "lognorm")
     if isinstance(dynamic_tempo, bool) and not dynamic_tempo:
         return False
+
+    print(static_tempo)
 
     # Short-Time Fourier Transform
     Y = stft(y, n_fft=n_fft, hop_length=hop_length)  # 1025 frequency bins x num_frames
