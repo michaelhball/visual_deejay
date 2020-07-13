@@ -31,15 +31,17 @@ if __name__ == '__main__':
     # TODO: test whether fps, num_frames etc. coming from my function are correct (cv2 functions give diff response).
 
     video_file = "/Users/michaelball/Desktop/big_breakfast.mov"
-    video_features = pickle.load(Path('./features_example_big.pkl').open('rb'))
-    video_features = clean_video_features(video_features)
-    tracklist = create_tracklist(video_features)
-    print(tracklist)
+    video_capture = cv2.VideoCapture(video_file)
 
-    # params = {"interval": 10}  # => 6 fps
-    # extract_features_from_video(video_file, params)
+    params = {"interval": 8}  # => 5 fps (because it's 40 by default apparently??)
+    video_features = extract_features_from_video(video_capture, params)
+    pickle.dump(video_features, Path("./big_breakfast_video_features.pkl").open('wb'), pickle.HIGHEST_PROTOCOL)
 
-    # video_capture = cv2.VideoCapture(video_file)
+    # video_features = pickle.load(Path('./features_example_big.pkl').open('rb'))
+    # video_features = clean_video_features(video_features)
+    # tracklist = create_tracklist(video_features)
+    # print(tracklist)
+
     # per_track_features = extract_track_features_from_video_features(video_features)
     # for artist, tracks in per_track_features.items():
     #     for track, track_features in tracks.items():
