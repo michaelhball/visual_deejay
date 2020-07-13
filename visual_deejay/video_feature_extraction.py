@@ -155,10 +155,10 @@ def extract_features_from_frame(frame):
     return features
 
 
-def extract_features_from_video(video_file, params):
+def extract_features_from_video(video_capture, params):
     """ Extracts features for each channel from a complete video
 
-    :param video_file: (path) path to video file we want to extract features from
+    :param video_capture: (path) cv2 video capture object.
     :param params: (dict) control params for the feature extraction
     :return: Features extracted if successful, else False.
     """
@@ -166,33 +166,25 @@ def extract_features_from_video(video_file, params):
     interval = params.get("interval")
 
     # get video fps, duration, & => total number of frames to process
-    video_properties = get_video_properties(video_file)
+    video_properties = get_video_properties(video_capture)
     if isinstance(video_properties, bool) and not video_properties:
         return False
-    duration, fps = video_properties.get("duration"), video_properties.get("fps")
-    total_num_frames = video_properties.get("num_frames")
-    frame_time = 1.0 / fps
+    num_frames = video_properties.get("num_frames")
+    frame_time = 1.0 / video_properties.get("fps")
 
-    # iterate through video frame by frame...
-    video_capture = cv2.VideoCapture(video_file)
     features = []
-
-    # frame_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    # frame_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-    # fps = int(video_capture.get(cv2.CAP_PROP_FPS))
-    # num_frames = int(video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
-    # duration = num_frames / fps
-    # print(duration, fps, num_frames, frame_height, frame_width)
-    # return
-
-    pbar = tqdm(total=total_num_frames)
-    for idx in range(total_num_frames):
+    pbar = tqdm(total=num_frames)
+    for idx in range(num_frames):
         pbar.update(1)
 
         # get the next frame
         ret, frame = video_capture.read()
         if isinstance(ret, bool) and not ret:
-            return False
+            if idx > num_frames - 1:
+                print("WE WENT PAST THE LAST FRAME => returning features")
+                return features
+            else:
+                return False
 
         # extract features for both channels incl. curr time stamps (only for desired fps)
         if idx % interval == 0:
@@ -203,15 +195,12 @@ def extract_features_from_video(video_file, params):
             features.append(frame_features)
 
         idx += 1
-        if idx > 20000:
-            break
 
     pbar.close()
     video_capture.release()
     cv2.destroyAllWindows()
 
-    pickle.dump(features, Path("./features_example_big.pkl").open('wb'), pickle.HIGHEST_PROTOCOL)
-    return True
+    return features
 
 
 def clean_video_features(video_features):

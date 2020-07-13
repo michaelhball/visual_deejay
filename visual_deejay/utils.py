@@ -101,22 +101,21 @@ def get_time_conversion(video_features, audio_features):
     pass
 
 
-def get_video_properties(filename):
+def get_video_properties(video_capture):
     """
 
-    :param filename:
+    :param video_capture:
     :return:
     """
 
-    duration = get_video_duration(filename)
-    fps = get_video_frame_rate(filename)
-    if fps == -1:
-        return False
-
+    num_frames = int(video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = int(video_capture.get(cv2.CAP_PROP_FPS))
     return {
-        "duration": duration,
+        "duration": num_frames / fps,
         "fps": fps,
-        "num_frames": math.floor(duration * fps)
+        "frame_height": int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+        "frame_width": int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)),
+        "num_frames": num_frames,
     }
 
 
