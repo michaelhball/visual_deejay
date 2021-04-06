@@ -74,5 +74,5 @@ def create_tracklist(video_features):
 
         return tracklist
     except Exception as e:
-        print(f"Exception creating tracklist: {e}")
+        print(e)
         return False
