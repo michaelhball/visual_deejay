@@ -4,7 +4,43 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import scipy.stats
-import sklearn
+
+__all__ = ['get_metadata', 'load_file', 'strip']
+
+
+def get_metadata(y, sampling_rate=44100):
+    """ Extract track metadata properties.
+
+    :param y: track signal
+    :param sampling_rate: sampling rate
+    :return: Dictionary containing all metadata properties
+    """
+
+    return {
+        "duration": librosa.get_duration(y, sampling_rate),
+    }
+
+
+def load_file(file_path, sampling_rate=44100, duration=None):
+    """ Load audio file from disc
+
+    :param file_path: (str) path to audio file
+    :param sampling_rate: (int)
+    :param duration: (float) optional duration (in s) if we want only a snippet of the track.
+    :return:
+    """
+
+    try:
+        file_type = file_path.split(".")[-1]
+        if file_type == "flac":
+            y, sr = librosa.load(file_path, sr=sampling_rate, duration=duration)
+            return y, sr
+        else:
+            print(f".{file_type} filetype is not currently supported")
+            return False
+    except:
+        print("Exception loading audio file")
+        return False
 
 
 def strip(y, frame_length, hop_length=512):
@@ -190,41 +226,6 @@ def compute_feature_delta(data):
     """
 
     return librosa.feature.delta(data)
-
-
-def get_metadata(y, sampling_rate=44100):
-    """
-
-    :param y:
-    :param sampling_rate:
-    :return:
-    """
-
-    return {
-        "duration": librosa.get_duration(y, sampling_rate),
-    }
-
-
-def load_file(file_path, sampling_rate=44100, duration=None):
-    """
-
-    :param file_path:
-    :param sampling_rate:
-    :param duration:
-    :return:
-    """
-
-    try:
-        file_type = file_path.split(".")[-1]
-        if file_type == "flac":
-            y, sr = librosa.load(file_path, sr=sampling_rate, duration=duration)
-            return y, sr
-        else:
-            print(f".{file_type} filetype is not currently supported")
-            return False
-    except:
-        print("Exception loading audio file")
-        return False
 
 
 def rmse(y, frame_length=1024, hop_length=512):
