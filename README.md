@@ -1,14 +1,12 @@
 # Visual Deejay
 
 <h3 align="center">
-<p>explorations into real-time audiovisual GANs (& how DJs can collaborate with them) </p>
+<p>:construction: Explorations into real-time audiovisual GANs :construction: </p>
 </h3>
 
-:construction: Under construction :construction:
-
-This is my ever-expanding experimentation with building tools for music visualisation. The end result 
-will be an end-to-end system for live visualisation of a DJ set, but the intermediate problems 
-seem to breed their own cans of worms (though each is a fascinating place for investigation).
+This is my ever-expanding experimentation into generative tools for music visualisation. The 
+end result will be an end-to-end system for live visualisation of a DJ set, but the intermediate 
+steps seem to continually breed their own cans of worms, albeit interesting ones.
 
 ## The Pipeline
 
