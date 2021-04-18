@@ -1,3 +1,9 @@
+"""
+Helper StyleGAN functions (for playing with a trained network, not for training)
+
+NB: Requires stylegan2 repository to be in the same directory as where the code importing these functions was run
+"""
+
 import numpy as np
 import pickle
 import PIL.Image

@@ -1,6 +1,7 @@
 """
 Functions for automatically generating a tracklist based off screen recording of DJ software.
 """
+
 __all__ = ["create_tracklist", "find_first_track_start"]
 
 
