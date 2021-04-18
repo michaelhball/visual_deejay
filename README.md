@@ -8,7 +8,7 @@ This is my ever-expanding experimentation into generative tools for music visual
 end result will be an end-to-end system for live visualisation of a DJ set, but the intermediate 
 steps seem to continually breed their own cans of worms, albeit interesting ones.
 
-## The Pipeline
+## :rocket: The Pipeline
 
 * [Extract controller features](/visual_deejay/video_feature_extraction.py) (from screen recording of Rekordbox) at each time stamp
 * [Extract tracklist](/visual_deejay/tracklist.py)
@@ -19,4 +19,14 @@ steps seem to continually breed their own cans of worms, albeit interesting ones
     phase) 
 * For each time step in the mix, use controller features + default track visualisations 
 of all tracks currently playing to create 'mixed' visualisation
- 
+
+
+## Extract controller features
+
+## Extract tracklist
+
+## Extract audio features
+
+## Generate default visualisations
+
+## Mix
