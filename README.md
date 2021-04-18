@@ -6,7 +6,9 @@
 
 This is my ever-expanding experimentation into generative tools for music visualisation. The 
 end result will be an end-to-end system for live visualisation of a DJ set, but the intermediate 
-steps seem to continually breed their own cans of worms, albeit interesting ones.
+steps seem to continually breed their own cans of worms. So far I've handled most of the audio 
+feature engineering, and I'm now playing with mechanisms for using these audio features to control 
+GAN outputs. 
 
 ## :rocket: The Pipeline
 
@@ -21,12 +23,12 @@ steps seem to continually breed their own cans of worms, albeit interesting ones
 of all tracks currently playing to create 'mixed' visualisation
 
 
-## Extract controller features
+## :musical_keyboard: Extract controller features
 
-## Extract tracklist
+## :spiral_notepad: Extract tracklist
 
-## Extract audio features
+## :musical_note: Extract audio features
 
-## Generate default visualisations
+## :framed_picture: Generate default visualisations
 
-## Mix
+## :chopsticks: Mix
