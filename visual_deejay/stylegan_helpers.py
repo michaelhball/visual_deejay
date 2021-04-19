@@ -15,7 +15,8 @@ sys.path.append("./stylegan2")
 import dnnlib
 import dnnlib.tflib as tflib
 
-__all__ = ['load_networks', 'convert_z_to_w']
+__all__ = ['load_networks', 'convert_z_to_w', 'generate_images_from_ws', 'generate_images_from_zs',
+           'generate_images_from_seeds', 'interpolate_linear']
 
 
 def load_networks(file_path):
@@ -34,13 +35,13 @@ def load_networks(file_path):
 
 
 def convert_z_to_w(Gs, latent, truncation_psi=0.7, truncation_cutoff=9):
-    """
+    """ Converts from
 
-    :param Gs:
-    :param latent:
+    :param Gs: TF StyleGAN2 generator network
+    :param latent: latent vector z we want to convert
     :param truncation_psi:
     :param truncation_cutoff:
-    :return:
+    :return: w vector
     """
 
     dlatent = Gs.components.mapping.run(latent, None)  # [seed, layer, component]
@@ -50,7 +51,7 @@ def convert_z_to_w(Gs, latent, truncation_psi=0.7, truncation_cutoff=9):
     return dlatent
 
 
-def generate_images_in_w_space(Gs, dlatents, truncation_psi):
+def generate_images_from_ws(Gs, dlatents, truncation_psi):
     """
 
     :param Gs:
@@ -74,7 +75,7 @@ def generate_images_in_w_space(Gs, dlatents, truncation_psi):
     return imgs
 
 
-def generate_images(Gs, noise_vars, zs, truncation_psi):
+def generate_images_from_zs(Gs, noise_vars, zs, truncation_psi):
     """
 
     :param Gs:
@@ -128,4 +129,20 @@ def generate_images_from_seeds(Gs, seeds, truncation_psi, noise_vars=None):
 
     if noise_vars is None:
         noise_vars = [var for name, var in Gs.components.synthesis.vars.items() if name.startswith('noise')]
-    return generate_images(Gs, noise_vars, generate_zs_from_seeds(Gs, seeds), truncation_psi)
+    return generate_images_from_zs(Gs, noise_vars, generate_zs_from_seeds(Gs, seeds), truncation_psi)
+
+
+def interpolate_linear(zs, steps):
+    """ Function to perform linear interpolation between vectors
+
+    :param zs: iterable of z variables
+    :param steps: number of steps that should should be generated between each latent (=> # frames)
+    :return:
+    """
+
+    out = []
+    for i in range(len(zs) - 1):
+        for index in range(steps):
+            fraction = index / float(steps)
+            out.append(zs[i + 1] * fraction + zs[i] * (1 - fraction))
+    return out
