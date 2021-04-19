@@ -1,16 +1,19 @@
+import imageio
 import IPython.display
 import math
 import numpy as np
 import os
 import PIL.Image
 
+from base64 import b64encode
 from io import BytesIO
+from IPython.display import HTML
 from tqdm.notebook import tqdm
 
-__all__ = ['imshow', 'save_images', 'create_image_grid']
+__all__ = ['show_image', 'show_video', 'save_images', 'create_image_grid', 'create_video_from_images']
 
 
-def imshow(image, image_format='png', jpeg_fallback=True):
+def show_image(image, image_format='png', jpeg_fallback=True):
     """ Displays a single image in Jupyter/Colab
 
     :param image: some array format image
@@ -25,6 +28,23 @@ def imshow(image, image_format='png', jpeg_fallback=True):
     im_data = str_file.getvalue()
     disp = IPython.display.display(IPython.display.Image(im_data))
     return disp
+
+
+def show_video(video_file_name=None, video_obj=None):
+    """ Displays an interactive video in notebook.
+
+    :param video_file_name: (path) path to video file to load
+    :param video_obj: (??) video file to display
+    :return: None
+    """
+
+    mp4 = open(video_file_name, 'rb').read()
+    data_uri = "data:video/mp4;base64," + b64encode(mp4).decode()
+    HTML("""
+      <video width=400 controls>
+        <source src="%s" type="video/mp4">
+      </video>
+    """ % data_uri)
 
 
 def save_images(images, save_dir):
@@ -63,3 +83,20 @@ def create_image_grid(images, scale=0.25, rows=1):
         img = img.resize((w, h), PIL.Image.ANTIALIAS)
         canvas.paste(img, (w * (i % cols), h * (i // cols)))
     return canvas
+
+
+def create_video_from_images(images, video_file_name):
+    """ Creates a video from a sequence of images
+
+    :param images: sequence of images to convert --> video
+    :param video_file_name: (path) name of output video file
+    :return: success indicator
+    """
+
+    try:
+        with imageio.get_writer(video_file_name, mode='I') as writer:
+            for image in tqdm(images, desc="creating video"):
+                writer.append_data(np.array(image))
+        return False
+    except:
+        return False
