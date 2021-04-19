@@ -1,7 +1,10 @@
 librosa==0.7.2
+imageio==2.9.0
+IPython==7.22.0
 matplotlib==3.2.1
 numba==0.48
 numpy==1.18.5
 opencv-python==4.2.0.34
 Pillow==8.2.0
 scipy==1.5.1
+tqdm==4.46.1
