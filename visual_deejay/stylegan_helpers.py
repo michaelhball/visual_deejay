@@ -32,7 +32,7 @@ def load_networks(file_path):
         G, D, Gs = pickle.load(stream, encoding='latin1')
     noise_vars = [var for name, var in Gs.components.synthesis.vars.items() if name.startswith('noise')]
     return G, D, Gs, noise_vars
-
+^
 
 def convert_z_to_w(Gs, latent, truncation_psi=0.7, truncation_cutoff=9):
     """ Converts from
