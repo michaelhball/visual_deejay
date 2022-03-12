@@ -3,7 +3,7 @@ imageio==2.9.0
 IPython==7.22.0
 matplotlib==3.2.1
 numba==0.48
-numpy==1.18.5
+numpy==1.21.0
 opencv-python==4.2.0.34
 Pillow==9.0.1
 scipy==1.5.1
